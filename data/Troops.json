@@ -1,0 +1,7 @@
+[
+null,
+{"id":1,"members":[{"enemyId":1,"x":174,"y":444,"hidden":false},{"enemyId":1,"x":180,"y":331,"hidden":false}],"name":"蝙蝠*2","pages":[{"conditions":{"actorHp":50,"actorId":1,"actorValid":false,"enemyHp":50,"enemyIndex":0,"enemyValid":false,"switchId":1,"switchValid":false,"turnA":0,"turnB":0,"turnEnding":false,"turnValid":false},"list":[{"code":0,"indent":0,"parameters":[]}],"span":0}]},
+{"id":2,"members":[{"enemyId":2,"x":196,"y":421,"hidden":false},{"enemyId":2,"x":209,"y":304,"hidden":false}],"name":"史莱姆*2","pages":[{"conditions":{"actorHp":50,"actorId":1,"actorValid":false,"enemyHp":50,"enemyIndex":0,"enemyValid":false,"switchId":1,"switchValid":false,"turnA":0,"turnB":0,"turnEnding":false,"turnValid":false},"list":[{"code":0,"indent":0,"parameters":[]}],"span":0}]},
+{"id":3,"members":[{"enemyId":3,"x":186,"y":406,"hidden":false}],"name":"兽人","pages":[{"conditions":{"actorHp":50,"actorId":1,"actorValid":false,"enemyHp":50,"enemyIndex":0,"enemyValid":false,"switchId":1,"switchValid":false,"turnA":0,"turnB":0,"turnEnding":false,"turnValid":false},"list":[{"code":0,"indent":0,"parameters":[]}],"span":0}]},
+{"id":4,"members":[{"enemyId":4,"x":207,"y":433,"hidden":false}],"name":"弥诺陶洛斯","pages":[{"conditions":{"actorHp":50,"actorId":1,"actorValid":false,"enemyHp":50,"enemyIndex":0,"enemyValid":false,"switchId":1,"switchValid":false,"turnA":0,"turnB":0,"turnEnding":false,"turnValid":false},"list":[{"code":0,"indent":0,"parameters":[]}],"span":0}]}
+]

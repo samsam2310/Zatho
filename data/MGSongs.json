@@ -1,0 +1,24 @@
+[
+null,
+{
+    "id":1,
+    "title":"君のとなりに",
+    "file":{
+        "name": "君のとなりに",
+        "pan": 0,
+        "pitch": 100,
+        "volume": 100
+    },
+    "difficulty":[
+        {
+            "star": 1,
+            "beats":[
+                {"type":0,"stTime":1000,"length":0,"position":0},
+                {"type":0,"stTime":2000,"length":0,"position":1},
+                {"type":0,"stTime":3000,"length":0,"position":2},
+                {"type":0,"stTime":4000,"length":0,"position":3}
+            ]
+        }
+    ]
+}
+]
