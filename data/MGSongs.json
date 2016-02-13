@@ -13,10 +13,10 @@ null,
         {
             "star": 1,
             "beats":[
-                {"type":0,"stTime":1000,"length":0,"position":0},
-                {"type":0,"stTime":2000,"length":0,"position":1},
-                {"type":0,"stTime":3000,"length":0,"position":2},
-                {"type":0,"stTime":4000,"length":0,"position":3}
+                {"type":1,"stTime":1000,"length":1000,"position":0},
+                {"type":0,"stTime":4000,"length":0,"position":1},
+                {"type":0,"stTime":6000,"length":0,"position":2},
+                {"type":0,"stTime":8000,"length":0,"position":3}
             ]
         }
     ]

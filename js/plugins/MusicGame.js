@@ -315,7 +315,9 @@ Sprite_MG.prototype.createBeat = function(_beat) {
         var beat = new Beat_Single(_beat.stTime, r);
         this._track[_beat.position].addChild(beat);
     }else if(_beat.type === Beat_Base.LONG){
-        ;
+        var r = this._beatr * (_beat.position%2*2-1) * -1;
+        var beat = new Beat_Long(_beat.stTime, _beat.length, r, _beat.position%2);
+        this._track[_beat.position].addChild(beat);
     }else if(_beat.type === Beat_Base.SLIDE){
         ;
     }
@@ -419,6 +421,8 @@ Beat_Base.prototype.initialize = function() {
     this._width = 160;
     this._height = 10;
 
+    // 1000 is tmp data;
+    this.move(0, 1000);
 }
 
 Beat_Base.prototype.update = function() {
@@ -433,6 +437,22 @@ Beat_Base.prototype.updatePosition = function() {
     ;
 }
 
+Beat_Base.prototype._getResult = function(gap) {
+    if(gap < MGManager._preOKTime){
+        return Beat_Base.BAD;
+    }else if(gap < MGManager._preGoodTime){
+        return Beat_Base.OK;
+    }else if(gap < MGManager._goodTime){
+        return Beat_Base.GOOD;
+    }else if(gap < MGManager._okTime){
+        return Beat_Base.OK;
+    }else if(gap < MGManager._badTime){
+        return Beat_Base.BAD;
+    }else{
+        return Beat_Base.MISS;
+    }
+}
+
 // Single Beat
 
 function Beat_Single() {
@@ -445,7 +465,6 @@ Beat_Single.prototype.constructor = Beat_Single;
 Beat_Single.prototype.initialize = function(_time, _rotation) {
     Beat_Base.prototype.initialize.call(this);
     this._time = _time;
-    this._pos = 0;
     this.rotation = _rotation;
 
     this.createBitmap();
@@ -469,7 +488,6 @@ Beat_Single.prototype.updatePosition = function() {
 }
 
 Beat_Single.prototype.checkMiss = function() {
-    // console.log(MGManager.seek() - this._time);
     if(MGManager.seek() - this._time > MGManager._badTime){
         MGManager.submit(Beat_Base.MISS);
         return true;
@@ -482,18 +500,8 @@ Beat_Single.prototype.trigger = function(ispush) {
         var gap = MGManager.seek() - this._time;
         if(gap < MGManager._preBadTime){
             return false;
-        }else if(gap < MGManager._preOKTime){
-            MGManager.submit(Beat_Base.BAD);
-        }else if(gap < MGManager._preGoodTime){
-            MGManager.submit(Beat_Base.OK);
-        }else if(gap < MGManager._goodTime){
-            MGManager.submit(Beat_Base.GOOD);
-        }else if(gap < MGManager._okTime){
-            MGManager.submit(Beat_Base.OK);
-        }else if(gap < MGManager._badTime){
-            MGManager.submit(Beat_Base.BAD);
-        }else{
-            MGManager.submit(Beat_Base.MISS);
+        }else {
+            MGManager.submit(this._getResult(gap));
         }
         return true;
     }
@@ -508,26 +516,92 @@ function Beat_Long() {
 Beat_Long.prototype = Object.create(Beat_Base.prototype);
 Beat_Long.prototype.constructor = Beat_Long;
 
-Beat_Long.prototype.initialize = function() {
+Beat_Long.prototype.initialize = function(_time, _length, _rotation, _isInverse) {
     Beat_Base.prototype.initialize.call(this);
-    this._pos = 0;
-    // 10 is tmp data;
-    this._width = 160;
-    this._height = 10;
-    
+    this._time = _time;
+    this._length = _length;
+    this.rotation = _rotation;
+    this._isInverse = _isInverse;
+    this._firstState = -1;
+
     this.createBitmap();
 }
 
 Beat_Long.prototype.update = function() {
     Beat_Base.prototype.update.call(this);
+    this.updatePosition();
+    this.move(0, this._pos);
+    // this.move(0,10);
 }
 
 Beat_Long.prototype.createBitmap = function() {
     Beat_Base.prototype.createBitmap.call(this);
+    var _back, _fir, _sec;
+    _back = new Sprite();
+    _back.bitmap = new Bitmap(320, this._length*MGManager._speed);
+    _back.bitmap.fillAll('#55a');
+    _back.move(this._isInverse?-160:0, 5);
+    _fir = new Sprite();
+    _fir.bitmap = new Bitmap(320, 10);
+    _fir.bitmap.fillAll('#0f0');
+    _fir.move(this._isInverse?-160:0, 0);
+    _sec = new Sprite();
+    _sec.bitmap = new Bitmap(320, 10);
+    _sec.bitmap.fillAll('#0f0');
+    _sec.move(this._isInverse?-160:0, this._length*MGManager._speed);
+    this.addChild(_back);
+    this.addChild(_fir);
+    this.addChild(_sec);
 }
 
 Beat_Long.prototype.updatePosition = function() {
     Beat_Base.prototype.updatePosition.call(this);
+    this._pos = (this._time - MGManager.seek()) * MGManager.speed;
+}
+
+Beat_Long.prototype.setfirstState = function(_state) {
+    this._firstState = _state;
+}
+
+Beat_Long.prototype.submitResult = function(_state) {
+    MGManager.submit(Math.max(this._firstState, _state));
+}
+
+Beat_Long.prototype.checkMiss = function() {
+    if(this._firstState === -1){
+        if(MGManager.seek() - this._time > MGManager._badTime){
+            this.setfirstState(Beat_Base.MISS);
+            return false;
+        }
+    }else{
+        if(MGManager.seek() - this._time - this._length > MGManager._badTime){
+            this.submitResult(Beat_Base.MISS);
+            return true;
+        }
+    }
+    return false;
+}
+
+Beat_Long.prototype.trigger = function(ispush) {
+    if(ispush){
+        var gap = MGManager.seek() - this._time;
+        if(gap < MGManager._preBadTime){
+            return false;
+        }else{
+            this.setfirstState(this._getResult(gap));
+        }
+        return false;
+    }else{
+        var gap = MGManager.seek() - this._time - this._length;
+        if(this._firstState === -1){
+            return false;
+        }else if(gap < MGManager._preBadTime){
+            this.submitResult(Beat_Base.MISS);
+        }else{
+            this.submitResult(this._getResult(gap));
+        }
+        return true;
+    }
 }
 
 
@@ -546,7 +620,7 @@ Beat_Slide.prototype.initialize = function() {
     // 10 is tmp data;
     this._width = 160;
     this._height = 10;
-    
+
     this.createBitmap();
 }
 
