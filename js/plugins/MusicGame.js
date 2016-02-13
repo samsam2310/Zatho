@@ -60,6 +60,9 @@ function MGManager() {
 MGManager._difficulty = 0;
 MGManager._timeBeforeStart = 5000;
 MGManager._speed = 0.1;
+MGManager._preBadTime = -1000;
+MGManager._preOKTime = -150;
+MGManager._preGoodTime = -50;
 MGManager._goodTime = 50;
 MGManager._okTime = 150;
 MGManager._badTime = 300;
@@ -213,11 +216,20 @@ Sprite_MG.prototype.initialize = function(_width, _height) {
     this._hearth = 1/Math.sin(this._trackr)*this._trackw;
     this._trackl = Math.sqrt(Math.pow((this._width - 2*this._heartw)/2, 2) + Math.pow((this._height - this._hearth)/2, 2));
     this._beatr = this._trackr*2 - Math.PI/2;
+    this._buttonw = this._heartw+Math.pow(this._hearth,2)/this._heartw;
+    this._buttonShape = [
+        [0,0, this._heartw,this._hearth, this._buttonw,0],
+        [0,this._height, this._heartw,this._height-this._hearth, this._buttonw,this._height],
+        [this._width,this._height, this._width-this._heartw,this._height-this._hearth, this._width-this._buttonw,this._height],
+        [this._width,0, this._width-this._heartw,this._hearth, this._width-this._buttonw,0]
+    ];
 
     this.bitmap = new Bitmap(this._width, this._height);
     this.bitmap.fillAll('#aaa');
 
     this.createTrack();
+    this.createButton();
+    this.inputInit();
 }
 
 Sprite_MG.prototype.createTrack = function(_trackw) {
@@ -265,6 +277,27 @@ Sprite_MG.prototype.createTrack = function(_trackw) {
     }
 }
 
+Sprite_MG.prototype.createButton = function() {
+    for(var i=0;i<4;i++){
+        var btn = new PIXI.Graphics();
+        btn.beginFill('#d33');
+        btn.drawPolygon(this._buttonShape[i]);
+        this.addChild(btn);
+    }
+}
+
+Sprite_MG.prototype.inputInit = function() {
+    var make_fun = function(that, id, ispush){
+        return function(){
+            console.log('trigger :' + id);
+            that.triggerButton(id, ispush);
+        };
+    }
+    for(var i=0;i<4;i++){
+        MGInput.addButtonEvent(this._buttonShape[i], make_fun(this,i,true), make_fun(this,i,false));
+    }
+}
+
 Sprite_MG.prototype.update = function() {
     Sprite_Base.prototype.update.call(this);
     MGManager.sync();
@@ -275,6 +308,7 @@ Sprite_MG.prototype.update = function() {
     this.checkBeats();
 }
 
+// TODO: creat LOND and SLIDE Beat;
 Sprite_MG.prototype.createBeat = function(_beat) {
     if(_beat.type === Beat_Base.SINGLE){
         var r = this._beatr * (_beat.position%2*2-1) * -1;
@@ -295,6 +329,12 @@ Sprite_MG.prototype.checkBeats = function() {
     }
 }
 
+Sprite_MG.prototype.triggerButton = function(trackid, ispush) {
+    if(this._track[trackid].children.length && this._track[trackid].children[0].trigger(ispush)){
+        this._track[trackid].removeChildAt(0);
+    }
+}
+
 
 // Scene of Music Game
 
@@ -307,7 +347,8 @@ Scene_MG.prototype.constructor = Scene_MG;
 
 Scene_MG.prototype.initialize = function() {
     Scene_Base.prototype.initialize.call(this);
-
+    MGInput.initialize();
+    
     // 1920,1080 is tmp data;
     this._width = 1920;
     this._height = 1080;
@@ -316,11 +357,12 @@ Scene_MG.prototype.initialize = function() {
 Scene_MG.prototype.create = function() {
     Scene_Base.prototype.create.call(this);
     // this.createBackground();
-
+    
     // 1680,1080 is tmp data;
-    this._board = new Sprite_MG(1680, 1080);
+    this._board= new Sprite_MG(1680, 1080);
     this._board.move((this._width - this._board._width)/2, 0);
     this.addChild(this._board);
+    MGInput.setOffset((this._width - this._board._width)/2, 0);
 };
 
 Scene_MG.prototype.start = function() {
@@ -342,6 +384,7 @@ Scene_MG.prototype.stop = function() {
 
 Scene_MG.prototype.terminate = function() {
     Scene_Base.prototype.terminate.call(this);
+    MGInput.clear();
 };
 
 Scene_MG.prototype.createBackground = function() {
@@ -434,6 +477,28 @@ Beat_Single.prototype.checkMiss = function() {
     return false;
 }
 
+Beat_Single.prototype.trigger = function(ispush) {
+    if(ispush){
+        var gap = MGManager.seek() - this._time;
+        if(gap < MGManager._preBadTime){
+            return false;
+        }else if(gap < MGManager._preOKTime){
+            MGManager.submit(Beat_Base.BAD);
+        }else if(gap < MGManager._preGoodTime){
+            MGManager.submit(Beat_Base.OK);
+        }else if(gap < MGManager._goodTime){
+            MGManager.submit(Beat_Base.GOOD);
+        }else if(gap < MGManager._okTime){
+            MGManager.submit(Beat_Base.OK);
+        }else if(gap < MGManager._badTime){
+            MGManager.submit(Beat_Base.BAD);
+        }else{
+            MGManager.submit(Beat_Base.MISS);
+        }
+        return true;
+    }
+}
+
 // Long Beat 
 
 function Beat_Long() {
@@ -495,4 +560,298 @@ Beat_Slide.prototype.createBitmap = function() {
 
 Beat_Slide.prototype.updatePosition = function() {
     Beat_Base.prototype.updatePosition.call(this);
+}
+
+
+// MG Input
+/** mgtouch objece: for MGInput
+  * mgtouch.identifier: 0 if it is mouse event,
+  * mgtouch.x, mgtouch.y: x,y to canvas;
+*/
+
+function MGInput() {
+    throw new Error('This is a static class');
+}
+
+MGInput.initialize = function() {
+    this._initMembers();
+    this._setupEventHandlers();
+};
+
+MGInput.clear = function() {
+    console.log('MGInput stop');
+    this._initMembers();
+    this._clearEventHandlers();
+}
+
+MGInput.setOffset = function(_offsetX, _offsetY) {
+    this._offsetX = _offsetX;
+    this._offsetY = _offsetY;
+}
+
+MGInput._initMembers = function() {
+    this._offsetX = 0;
+    this._offsetY = 0;
+    this._buttonShape = [];
+    this._buttonTouchStart = [];
+    this._buttonTouchEnd = [];
+    this._buttonState = [];
+    this._buttonNewState = [];
+    this._touchs = {};
+    this._mousePressed = false;
+};
+
+/**shape: PIXI shape,ex: PIXI.Polygon();
+  *startfun: callback when button is pushed;
+  *endfun: callback when button is released;
+*/
+MGInput.addButtonEvent = function(shape, startfun, endfun) {
+    this._buttonShape.push(shape);
+    this._buttonTouchStart.push(startfun);
+    this._buttonTouchEnd.push(endfun);
+    this._buttonState.push(0);
+    this._buttonNewState.push(0);
+}
+
+MGInput.pageToTouchX = function(pageX) {
+    return Graphics.pageToCanvasX(pageX) - this._offsetX;
+}
+
+MGInput.pageToTouchY = function(pageY) {
+    return Graphics.pageToCanvasY(pageY) - this._offsetY;
+}
+
+MGInput._setupEventHandlers = function() {
+    document.addEventListener('mousedown', this._onMouseDown.bind(this));
+    document.addEventListener('mousemove', this._onMouseMove.bind(this));
+    document.addEventListener('mouseup', this._onMouseUp.bind(this));
+    document.addEventListener('wheel', this._onWheel.bind(this));
+    document.addEventListener('touchstart', this._onTouchStart.bind(this));
+    document.addEventListener('touchmove', this._onTouchMove.bind(this));
+    document.addEventListener('touchend', this._onTouchEnd.bind(this));
+    document.addEventListener('touchcancel', this._onTouchCancel.bind(this));
+    document.addEventListener('pointerdown', this._onPointerDown.bind(this));
+};
+
+MGInput._clearEventHandlers = function() {
+    document.removeEventListener('mousedown', this._onMouseDown.bind(this));
+    document.removeEventListener('mousemove', this._onMouseMove.bind(this));
+    document.removeEventListener('mouseup', this._onMouseUp.bind(this));
+    document.removeEventListener('wheel', this._onWheel.bind(this));
+    document.removeEventListener('touchstart', this._onTouchStart.bind(this));
+    document.removeEventListener('touchmove', this._onTouchMove.bind(this));
+    document.removeEventListener('touchend', this._onTouchEnd.bind(this));
+    document.removeEventListener('touchcancel', this._onTouchCancel.bind(this));
+    document.removeEventListener('pointerdown', this._onPointerDown.bind(this));
+}
+
+MGInput._onMouseDown = function(event) {
+    if (event.button === 0) {
+        this._onLeftButtonDown(event);
+    } else if (event.button === 1) {
+        this._onMiddleButtonDown(event);
+    } else if (event.button === 2) {
+        this._onRightButtonDown(event);
+    }
+};
+
+/**
+ * @static
+ * @method _onLeftButtonDown
+ * @param {MouseEvent} event
+ * @private
+ */
+MGInput._onLeftButtonDown = function(event) {
+    var x = MGInput.pageToTouchX(event.pageX);
+    var y = MGInput.pageToTouchY(event.pageY);
+    if (Graphics.isInsideCanvas(x, y)) {
+        this._mousePressed = true;
+        this._onTrigger({identifier:0, x:x, y:y}, false);
+        this._update();
+    }
+};
+
+/**
+ * @static
+ * @method _onMiddleButtonDown
+ * @param {MouseEvent} event
+ * @private
+ */
+MGInput._onMiddleButtonDown = function(event) {
+};
+
+/**
+ * @static
+ * @method _onRightButtonDown
+ * @param {MouseEvent} event
+ * @private
+ */
+MGInput._onRightButtonDown = function(event) {
+};
+
+/**
+ * @static
+ * @method _onMouseMove
+ * @param {MouseEvent} event
+ * @private
+ */
+MGInput._onMouseMove = function(event) {
+    if (this._mousePressed) {
+        var x = MGInput.pageToTouchX(event.pageX);
+        var y = MGInput.pageToTouchY(event.pageY);
+        this._onTrigger({identifier:0, x:x, y:y}, false);
+        this._update();
+    }
+};
+
+/**
+ * @static
+ * @method _onMouseUp
+ * @param {MouseEvent} event
+ * @private
+ */
+MGInput._onMouseUp = function(event) {
+    if (event.button === 0) {
+        var x = MGInput.pageToTouchX(event.pageX);
+        var y = MGInput.pageToTouchY(event.pageY);
+        this._mousePressed = false;
+        this._onTrigger({identifier:0, x:x, y:y}, true);
+        this._update();
+    }
+};
+
+/**
+ * @static
+ * @method _onWheel
+ * @param {WheelEvent} event
+ * @private
+ */
+MGInput._onWheel = function(event) {
+    event.preventDefault();
+};
+
+/**
+ * @static
+ * @method _onTouchStart
+ * @param {TouchEvent} event
+ * @private
+ */
+MGInput._onTouchStart = function(event) {
+    for (var i = 0; i < event.changedTouches.length; i++) {
+        var touch = event.changedTouches[i];
+        var x = MGInput.pageToTouchX(touch.pageX);
+        var y = MGInput.pageToTouchY(touch.pageY);
+        if (Graphics.isInsideCanvas(x, y)) {
+            this._onTrigger({identifier:touch.identifier, x:x, y:y}, false);
+            event.preventDefault();
+        }
+    }
+    this._update();
+    if (window.cordova || window.navigator.standalone) {
+        event.preventDefault();
+    }
+};
+
+/**
+ * @static
+ * @method _onTouchMove
+ * @param {TouchEvent} event
+ * @private
+ */
+MGInput._onTouchMove = function(event) {
+    for (var i = 0; i < event.changedTouches.length; i++) {
+        var touch = event.changedTouches[i];
+        var x = MGInput.pageToTouchX(touch.pageX);
+        var y = MGInput.pageToTouchY(touch.pageY);
+        this._onTrigger({identifier:touch.identifier, x:x, y:y}, false);
+        this._update();
+    }
+};
+
+/**
+ * @static
+ * @method _onTouchEnd
+ * @param {TouchEvent} event
+ * @private
+ */
+MGInput._onTouchEnd = function(event) {
+    for (var i = 0; i < event.changedTouches.length; i++) {
+        var touch = event.changedTouches[i];
+        var x = MGInput.pageToTouchX(touch.pageX);
+        var y = MGInput.pageToTouchY(touch.pageY);
+        this._onTrigger({identifier:touch.identifier, x:x, y:y}, true);
+        this._update();
+    }
+};
+
+/**
+ * @static
+ * @method _onTouchCancel
+ * @param {TouchEvent} event
+ * @private
+ */
+MGInput._onTouchCancel = function(event) {
+};
+
+/**
+ * @static
+ * @method _onPointerDown
+ * @param {PointerEvent} event
+ * @private
+ */
+MGInput._onPointerDown = function(event) {
+    if (event.pointerType === 'touch' && !event.isPrimary) {
+        var x = MGInput.pageToTouchX(event.pageX);
+        var y = MGInput.pageToTouchY(event.pageY);
+        if (Graphics.isInsideCanvas(x, y)) {
+            // For Microsoft Edge
+            // onCancel(x, y);
+            event.preventDefault();
+        }
+    }
+};
+
+MGInput._onTrigger = function(mgtouch, isremove) {
+    if(mgtouch.identifier in this._touchs){
+        this._buttonNewState[this._touchs[mgtouch.identifier]]--;
+        if(isremove){
+            delete this._touchs[mgtouch.identifier];
+        }
+    }
+    if(!isremove){
+        for(var i=0;i<this._buttonShape.length;i++){
+            if(this.isPointInPolygon(mgtouch.x, mgtouch.y, this._buttonShape[i])){
+                this._touchs[mgtouch.identifier] = i;
+                this._buttonNewState[this._touchs[mgtouch.identifier]]++;
+            }
+        }
+    }
+}
+
+MGInput.isPointInPolygon = function(x, y, pol) {
+    var polygon_area = 0, test_area = 0;
+    for(var i=0;i<pol.length-2;i+=2){
+        if(i>0){
+            polygon_area += this._triangleArea(pol[0], pol[1], pol[i],pol[i+1], pol[i+2],pol[i+3]);
+        }
+        test_area += this._triangleArea(x,y, pol[i],pol[i+1], pol[i+2],pol[i+3]);
+    }
+    test_area += this._triangleArea(x,y, pol[0], pol[1], pol[pol.length-2], pol[pol.length-1]);
+    // 1e-3 is tmp data;
+    return Math.abs(polygon_area - test_area) < 1e-3;
+}
+
+MGInput._triangleArea = function(x1,y1,x2,y2,x3,y3) {
+    return Math.abs(x1*y2-y1*x2+x2*y3-y2*x3+x3*y1-y3*x1)/2;
+}
+
+MGInput._update = function() {
+    for(var i=0;i<this._buttonState.length;i++){
+        if(this._buttonNewState[i] && !this._buttonState[i]){
+            this._buttonTouchStart[i]();
+        }else if(!this._buttonNewState[i] && this._buttonState[i]){
+            this._buttonTouchEnd[i]();
+        }
+        this._buttonState[i] = this._buttonNewState[i];
+    }
 }
