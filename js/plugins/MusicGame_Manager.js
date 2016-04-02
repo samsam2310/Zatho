@@ -79,7 +79,7 @@ MGManager.startGame = function() {
 MGManager.updateBeats = function() {
     if(this._phase !== 'play')return [];
     var newBeats = [], p = 0;
-    while(this.checkNewBeat()){
+    while(this._checkNewBeat()){
         this._beatpointer++;
         p++;
     }
@@ -90,8 +90,8 @@ MGManager.updateBeats = function() {
     return newBeats;
 }
 
-MGManager.checkNewBeat = function() {
-    // 3000 is tmp data;
+MGManager._checkNewBeat = function() {
+    // 10000 is tmp data;
     return this._beatpointer < this._beats.length &&
             this._beats[this._beatpointer].stTime < this.seek() + 10000;
 }

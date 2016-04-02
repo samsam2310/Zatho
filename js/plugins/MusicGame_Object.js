@@ -223,24 +223,52 @@ function Beat_Slide() {
 Beat_Slide.prototype = Object.create(Beat_Base.prototype);
 Beat_Slide.prototype.constructor = Beat_Slide;
 
-Beat_Slide.prototype.initialize = function() {
+Beat_Slide.prototype.initialize = function(_time, _length, _width, _height, _isRev) {
     Beat_Base.prototype.initialize.call(this);
-    this._pos = 0;
-    // 10 is tmp data;
-    this._width = 160;
-    this._height = 10;
+    this._time = _time;
+    this._length = _length;
+    this._width = _width;
+    this._height = _height;
+    this.x = _isRev?_width:0;
+    this.y = _isRev?_height:0;
+    this.rotation = _isRev?Math.PI:0;
+    this.initMembers();
 
     this.createBitmap();
 }
 
+Beat_Slide.prototype.initMembers = function() {
+    this._line = null;
+    this._point = [];
+    this._point.length = 10;
+    this._pointBitmap = null;
+}
+
 Beat_Slide.prototype.update = function() {
     Beat_Base.prototype.update.call(this);
+    this.updatePosition();
 }
 
 Beat_Slide.prototype.createBitmap = function() {
     Beat_Base.prototype.createBitmap.call(this);
+    this.bitmap = new Bitmap(this._width, this._height);
+
+    this._line = new Sprite();
+    this._line.bitmap = new Bitmap(this._width, 10);
+    this._line.bitmap.fillAll('#33d');
+    this.addChild(this._line);
+
+    this._pointBitmap = new Bitmap(this._width, 10);
+    this._pointBitmap.fillAll('#3d3');
+    for(var i=0;i<10;i++){
+        this._point[i] = new Sprite();
+        this._point[i].bitmap = this._pointBitmap;
+        this._point[i].y = this._height/10*i + this._height/20;
+        this.addChild(this._point[i]);
+    }
 }
 
 Beat_Slide.prototype.updatePosition = function() {
     Beat_Base.prototype.updatePosition.call(this);
+    this._line.y = (MGManager.seek() - this._time) / this._length * this._height;
 }
