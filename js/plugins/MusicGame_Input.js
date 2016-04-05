@@ -34,11 +34,14 @@ MGInput._initMembers = function() {
     this._buttonTouchEnd = [];
     this._buttonState = [];
     this._buttonNewState = [];
+    this._triggerBtn = {};
+    this._slideShape = [];
+    this._slideEvent = [];
     this._touchs = {};
     this._mousePressed = false;
 };
 
-/**shape: PIXI shape,ex: PIXI.Polygon();
+/**shape: PIXI shape,ex: An array [x,y,x,y...];
   *startfun: callback when button is pushed;
   *endfun: callback when button is released;
 */
@@ -48,6 +51,11 @@ MGInput.addButtonEvent = function(shape, startfun, endfun) {
     this._buttonTouchEnd.push(endfun);
     this._buttonState.push(0);
     this._buttonNewState.push(0);
+}
+
+MGInput.addSlideEvent = function(shape, eventfun) {
+    this._slideShape.push(shape);
+    this._slideEvent.push(eventfun);
 }
 
 MGInput.pageToTouchX = function(pageX) {
@@ -201,8 +209,8 @@ MGInput._onTouchMove = function(event) {
         var x = MGInput.pageToTouchX(touch.pageX);
         var y = MGInput.pageToTouchY(touch.pageY);
         this._onTrigger({identifier:touch.identifier, x:x, y:y}, false);
-        this._update();
     }
+    this._update();
 };
 
 /**
@@ -217,8 +225,8 @@ MGInput._onTouchEnd = function(event) {
         var x = MGInput.pageToTouchX(touch.pageX);
         var y = MGInput.pageToTouchY(touch.pageY);
         this._onTrigger({identifier:touch.identifier, x:x, y:y}, true);
-        this._update();
     }
+    this._update();
 };
 
 /**
@@ -250,17 +258,30 @@ MGInput._onPointerDown = function(event) {
 
 MGInput._onTrigger = function(mgtouch, isremove) {
     if(mgtouch.identifier in this._touchs){
-        this._buttonNewState[this._touchs[mgtouch.identifier]]--;
+        if(this._touchs[mgtouch.identifier].tgBtn != -1){
+            this._buttonNewState[this._touchs[mgtouch.identifier].tgBtn]--;
+        }
         if(isremove){
             delete this._touchs[mgtouch.identifier];
+            return;
         }
+    }else{
+        this._touchs[mgtouch.identifier] = {
+            'x': 0,
+            'y': 0,
+            'preRes': -1,
+            'tgSlide': -1,
+            'tgBtn': -1
+        };
     }
-    if(!isremove){
-        for(var i=0;i<this._buttonShape.length;i++){
-            if(this.isPointInPolygon(mgtouch.x, mgtouch.y, this._buttonShape[i])){
-                this._touchs[mgtouch.identifier] = i;
-                this._buttonNewState[this._touchs[mgtouch.identifier]]++;
-            }
+    this._touchs[mgtouch.identifier].tgBtn = -1;
+    this._touchs[mgtouch.identifier].x = mgtouch.x;
+    this._touchs[mgtouch.identifier].y = mgtouch.y;
+    for(var i=0;i<this._buttonShape.length;i++){
+        if(this.isPointInPolygon(mgtouch.x, mgtouch.y, this._buttonShape[i])){
+            this._buttonNewState[i]++;
+            this._touchs[mgtouch.identifier].tgBtn = i;
+            break;
         }
     }
 }
@@ -282,6 +303,14 @@ MGInput._triangleArea = function(x1,y1,x2,y2,x3,y3) {
     return Math.abs(x1*y2-y1*x2+x2*y3-y2*x3+x3*y1-y3*x1)/2;
 }
 
+MGInput._dot = function(x1, y1, x2, y2) {
+    return x1*x2+y1*y2;
+}
+
+MGInput._distance = function(x1, y1, x2, y2) {
+    return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+}
+
 MGInput._update = function() {
     for(var i=0;i<this._buttonState.length;i++){
         if(this._buttonNewState[i] && !this._buttonState[i]){
@@ -290,5 +319,22 @@ MGInput._update = function() {
             this._buttonTouchEnd[i]();
         }
         this._buttonState[i] = this._buttonNewState[i];
+    }
+    for(var i=0;i<this._touchs.length;i++){
+        var tgSlide = -1;
+        for(var j=0;j<this._slideShape.length;j++){
+            if(this.isPointInPolygon(this._touchs[i].x, this._touchs[i].y, this._slideShape[j])){
+                tgSlide = j;
+            }
+        }
+        if(tgSlide!==-1 && this._touchs[i].tgSlide === tgSlide){
+            var sp = this._slideShape[tgSlide],
+                res = this._dot(this._touchs[i].x-sp[0], this._touchs[i].y-sp[1], sp[2]-sp[0], sp[3]-sp[1]) / this._distance(sp[0],sp[1],sp[2],sp[3]);
+            this._slideEvent[tgSlide](this._touchs[i].preRes, res);
+            this._touchs[i].preRes = res;
+        }
+        this._touchs[i].x = this._touchs[i].preX;
+        this._touchs[i].y = this._touchs[i].preY;
+        this._touchs[i].tgSlide = tgSlide;
     }
 }

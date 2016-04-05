@@ -222,11 +222,29 @@ Sprite_SlideTrack.prototype.createTrack = function() {
     }
 }
 
+Sprite_SlideTrack.prototype.inputInit = function() {
+    var make_fun = function(that, id){
+        return function(x1, x2){
+            console.log('trigger S:' + id);
+            that.triggerSlide(id, x1, x2);
+        };
+    }
+    for(var i=0;i<3;i++){.
+        // TODO: add shape arg;
+        MGInput.addSlideEvent(/*sp,*/ make_fun(this,i));
+    }
+}
+
 Sprite_SlideTrack.prototype.createNewBeat = function(_beat) {
     console.log("Create Slide beat!");
     var pos = _beat.position % 3;
     var newBeat = new Beat_Slide(_beat.stTime, _beat.length, this._trackw[pos], this._trackl[pos], _beat.isRev);
     this._track[pos].addChild(newBeat);
+}
+
+Sprite_SlideTrack.prototype.triggerSlide = function(trackid, x1, x2) {
+    console.log('id' + trackid + "Slide from " + x1 + 'to' + x2);
+    // TODO: slide event handler;
 }
 
 Sprite_SlideTrack.prototype.update = function() {
