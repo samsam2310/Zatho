@@ -197,6 +197,7 @@ Sprite_SlideTrack.prototype.initialize = function(_x, _y, _width, _height, _rot)
     this.addChild(this.mask);
 
     this.createTrack();
+    this.inputInit();
 }
 
 Sprite_SlideTrack.prototype.initMembers = function() {
@@ -229,9 +230,14 @@ Sprite_SlideTrack.prototype.inputInit = function() {
             that.triggerSlide(id, x1, x2);
         };
     }
-    for(var i=0;i<3;i++){.
-        // TODO: add shape arg;
-        MGInput.addSlideEvent(/*sp,*/ make_fun(this,i));
+    for(var i=0;i<3;i++){
+        // TODO: Right S-track is Error; 
+        MGInput.addSlideEvent(
+            MGMath.rotate(
+                this._trackx[i], this._tracky[i],
+                [0,0,0,this._trackl[i],this._trackw[i],this._trackl[i],this._trackw[i],0],
+                this._trackr[i] + this.rotation),
+            make_fun(this,i) );
     }
 }
 

@@ -56,6 +56,8 @@ MGInput.addButtonEvent = function(shape, startfun, endfun) {
 MGInput.addSlideEvent = function(shape, eventfun) {
     this._slideShape.push(shape);
     this._slideEvent.push(eventfun);
+    console.log("ADD Slide:");
+    for(var i = 0; i<shape.length;i+=2)console.log("indx: "+shape[i] +' '+shape[i+1]);
 }
 
 MGInput.pageToTouchX = function(pageX) {
@@ -278,37 +280,12 @@ MGInput._onTrigger = function(mgtouch, isremove) {
     this._touchs[mgtouch.identifier].x = mgtouch.x;
     this._touchs[mgtouch.identifier].y = mgtouch.y;
     for(var i=0;i<this._buttonShape.length;i++){
-        if(this.isPointInPolygon(mgtouch.x, mgtouch.y, this._buttonShape[i])){
+        if(MGMath.isPointInPolygon(mgtouch.x, mgtouch.y, this._buttonShape[i])){
             this._buttonNewState[i]++;
             this._touchs[mgtouch.identifier].tgBtn = i;
             break;
         }
     }
-}
-
-MGInput.isPointInPolygon = function(x, y, pol) {
-    var polygon_area = 0, test_area = 0;
-    for(var i=0;i<pol.length-2;i+=2){
-        if(i>0){
-            polygon_area += this._triangleArea(pol[0], pol[1], pol[i],pol[i+1], pol[i+2],pol[i+3]);
-        }
-        test_area += this._triangleArea(x,y, pol[i],pol[i+1], pol[i+2],pol[i+3]);
-    }
-    test_area += this._triangleArea(x,y, pol[0], pol[1], pol[pol.length-2], pol[pol.length-1]);
-    // 1e-3 is tmp data;
-    return Math.abs(polygon_area - test_area) < 1e-3;
-}
-
-MGInput._triangleArea = function(x1,y1,x2,y2,x3,y3) {
-    return Math.abs(x1*y2-y1*x2+x2*y3-y2*x3+x3*y1-y3*x1)/2;
-}
-
-MGInput._dot = function(x1, y1, x2, y2) {
-    return x1*x2+y1*y2;
-}
-
-MGInput._distance = function(x1, y1, x2, y2) {
-    return Math.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
 }
 
 MGInput._update = function() {
@@ -320,17 +297,20 @@ MGInput._update = function() {
         }
         this._buttonState[i] = this._buttonNewState[i];
     }
-    for(var i=0;i<this._touchs.length;i++){
+    for(var i in this._touchs){
         var tgSlide = -1;
         for(var j=0;j<this._slideShape.length;j++){
-            if(this.isPointInPolygon(this._touchs[i].x, this._touchs[i].y, this._slideShape[j])){
+            if(MGMath.isPointInPolygon(this._touchs[i].x, this._touchs[i].y, this._slideShape[j])){
                 tgSlide = j;
             }
         }
-        if(tgSlide!==-1 && this._touchs[i].tgSlide === tgSlide){
+        if(tgSlide!==-1){
             var sp = this._slideShape[tgSlide],
-                res = this._dot(this._touchs[i].x-sp[0], this._touchs[i].y-sp[1], sp[2]-sp[0], sp[3]-sp[1]) / this._distance(sp[0],sp[1],sp[2],sp[3]);
-            this._slideEvent[tgSlide](this._touchs[i].preRes, res);
+                res = Math.floor(
+                    MGMath.dot(this._touchs[i].x-sp[0], this._touchs[i].y-sp[1], sp[2]-sp[0], sp[3]-sp[1]) / MGMath.distance(sp[0],sp[1],sp[2],sp[3]));
+            if(this._touchs[i].tgSlide === tgSlide){
+                this._slideEvent[tgSlide](this._touchs[i].preRes, res);
+            }
             this._touchs[i].preRes = res;
         }
         this._touchs[i].x = this._touchs[i].preX;
