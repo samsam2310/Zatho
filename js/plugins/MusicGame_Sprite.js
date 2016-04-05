@@ -140,7 +140,6 @@ Sprite_MG.prototype.update = function() {
     this.checkBeats();
 }
 
-// TODO: creat SLIDE Beat;
 Sprite_MG.prototype.createNewBeat = function(_beat) {
     if(_beat.type === Beat_Base.SINGLE){
         var r = this._beatr * (_beat.position%2*2-1) * -1;
@@ -231,10 +230,10 @@ Sprite_SlideTrack.prototype.inputInit = function() {
         };
     }
     for(var i=0;i<3;i++){
-        // TODO: Right S-track is Error; 
+        var realTrackxy = MGMath.rotate(this.x, this.y, [this._trackx[i], this._tracky[i]], this.rotation);
         MGInput.addSlideEvent(
             MGMath.rotate(
-                this._trackx[i], this._tracky[i],
+                realTrackxy[0], realTrackxy[1],
                 [0,0,0,this._trackl[i],this._trackw[i],this._trackl[i],this._trackw[i],0],
                 this._trackr[i] + this.rotation),
             make_fun(this,i) );
