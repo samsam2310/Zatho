@@ -223,6 +223,7 @@ Beat_Slide.prototype.initialize = function(_time, _length, _width, _height, _isR
     this.x = _isRev?_width:0;
     this.y = _isRev?_height:0;
     this.rotation = _isRev?Math.PI:0;
+    this.visible = false;
     this.initMembers();
 
     this.createBitmap();
@@ -241,16 +242,20 @@ Beat_Slide.prototype.initMembers = function() {
 
 Beat_Slide.prototype.createBitmap = function() {
     this.bitmap = new Bitmap(this._width, this._height);
+    this.mask = new PIXI.Graphics();
+    this.mask.beginFill(0xffffff);
+    this.mask.drawRect(0,0, this._width, this._height);
+    this.addChild(this.mask);
 
     this._pointer = new Sprite();
     this._pointer.bitmap = new Bitmap(this._width, 10);
-    this._pointer.bitmap.fillAll('#33d');
+    this._pointer.bitmap.fillAll('#3d3');
     this.addChild(this._pointer);
 
     for(var i=0;i<10;i++){
         this._checkPoint[i] = new Sprite();
         this._checkPoint[i].bitmap = new Bitmap(this._width, 10);
-        this._checkPoint[i].bitmap.fillAll('#3d3');
+        this._checkPoint[i].bitmap.fillAll('#33d');
         this._checkPoint[i].y = this._height/10*i + this._height/20;
         this.addChild(this._checkPoint[i]);
     }
@@ -258,6 +263,8 @@ Beat_Slide.prototype.createBitmap = function() {
 
 Beat_Slide.prototype.updatePosition = function() {
     this._pointer.y  = (MGManager.seek() - this._time) / this._length * (this._height-this._height/20);
+    // 1000 is tmp data;
+    if(!this.visible && (this._time - MGManager.seek()) < 1000)this.visible = true;
 }
 
 // return true will remove this beat;
@@ -271,6 +278,7 @@ Beat_Slide.prototype.checkMiss = function() {
 
 // return true will remove this beat;
 Beat_Slide.prototype.trigger = function(x1, x2) {
+    if(!this.visible)return false;
     if(x1-x2 > 0 !== this._isRev)return false;
     if(this._isRev){
         x1 = this._height - x1;

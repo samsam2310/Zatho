@@ -44,7 +44,7 @@ Scene_MG.prototype.start = function() {
 
 Scene_MG.prototype.update = function() {
     Scene_Base.prototype.update.call(this);
-
+    MGManager.sync();
 };
 
 Scene_MG.prototype.stop = function() {

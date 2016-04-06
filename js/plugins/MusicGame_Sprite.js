@@ -23,17 +23,110 @@ Sprite_MG.prototype.initialize = function(_width, _height) {
     this.bitmap = new Bitmap(this._width, this._height);
     this.bitmap.fillAll('#aaa');
 
-    this.createXTrack();
-    this.createButton();
-    this.createSlideTrack();
-    this.inputInit();
+    this.createAllTrack();
 }
 
 Sprite_MG.prototype.initMembers = function() {
+    this._xTrack = null;
+    this._sTrack = [];
+    this._sTrack.length = 2;
+
     // 160 is tmp data;
-    this._trackw = 160;
-    this._trackh = Math.sqrt(Math.pow(this._width, 2) + Math.pow(this._height, 2) - Math.pow(this._trackw, 2));
-    this._trackr = Math.atan2(this._width, this._height) - Math.atan2(this._trackw, this._trackh);
+    this._xTrackw = 160;
+    this._xTrackh = Math.sqrt(Math.pow(this._width, 2) + Math.pow(this._height, 2) - Math.pow(this._xTrackw, 2));
+    this._xTrackr = Math.atan2(this._width, this._height) - Math.atan2(this._xTrackw, this._xTrackh);
+    // 10 is tmp data;
+    this._sTrackShift = 10;
+    this._sTrackh = this._height - 2*this._sTrackShift;
+    this._sTrackw = this._sTrackh/2*Math.tan(this._xTrackr);
+}
+
+Sprite_MG.prototype.update = function() {
+    Sprite_Base.prototype.update.call(this);
+    this.checkNewBeat();
+}
+
+Sprite_MG.prototype.createAllTrack = function() {
+    this._xTrack = new Sprite_XTrackPanel(this._width, this._height,
+                                            this._xTrackw, this._xTrackh, this._xTrackr);
+    this._sTrack[0] = new Sprite_SlideTrackPanel(0, this._sTrackShift, 
+                                                this._sTrackw, this._sTrackh, 0);
+    this._sTrack[1] = new Sprite_SlideTrackPanel(this._width, this._height - this._sTrackShift,
+                                                this._sTrackw, this._sTrackh, Math.PI);
+    this.addChild(this._xTrack);
+    this.addChild(this._sTrack[0]);
+    this.addChild(this._sTrack[1]);
+}
+
+Sprite_MG.prototype.checkNewBeat = function() {
+    var newBeats = MGManager.updateBeats();
+    newBeats.forEach(function(_beat){
+        if(_beat.type === Beat_Base.SINGLE || _beat.type === Beat_Base.LONG){
+            this._xTrack.createNewBeat(_beat);
+        }else if(_beat.type === Beat_Base.SLIDE){
+            this._sTrack[_beat.position>=3?1:0].createNewBeat(_beat);
+        }
+    }, this);
+}
+
+
+// The Super Class for Sprite_XTrackPanel and Sprite_SlideTrackPanel
+
+function Sprite_TrackPanel() {
+    this.initialize.apply(this, arguments);
+}
+
+Sprite_TrackPanel.prototype = Object.create(Sprite_Base.prototype);
+Sprite_TrackPanel.prototype.constructor = Sprite_TrackPanel;
+
+Sprite_TrackPanel.prototype.initialize = function(_width, _height) {
+    Sprite_Base.prototype.initialize.call(this);
+    this._width = _width;
+    this._height = _height;
+}
+
+Sprite_TrackPanel.prototype.update = function() {
+    Sprite_Base.prototype.update.call(this);
+    this.checkBeats();
+}
+
+Sprite_TrackPanel.prototype.checkBeats = function() {
+    for(var i=0;i<this._track.length;i++){
+        if(this._track[i].children.length && this._track[i].children[0].checkMiss()){
+            this._track[i].removeChildAt(0);
+        }
+    }
+}
+
+Sprite_TrackPanel.prototype.triggerTrack = function(trackid, arg1, arg2) {
+    if(this._track[trackid].children.length && this._track[trackid].children[0].trigger(arg1, arg2)){
+        this._track[trackid].removeChildAt(0);
+    }
+}
+
+
+// Sprite of X Track
+
+function Sprite_XTrackPanel() {
+    this.initialize.apply(this, arguments);
+}
+
+Sprite_XTrackPanel.prototype = Object.create(Sprite_TrackPanel.prototype);
+Sprite_XTrackPanel.prototype.constructor = Sprite_XTrackPanel;
+
+Sprite_XTrackPanel.prototype.initialize = function(_width, _height, _trackw, _trackh, _trackr) {
+    Sprite_TrackPanel.prototype.initialize.call(this, _width, _height);
+    this._trackw = _trackw;
+    this._trackh = _trackh;
+    this._trackr = _trackr;
+    this.initMembers();
+
+    this.createTrack();
+    this.createButton();
+    this.inputInit();
+}
+
+Sprite_XTrackPanel.prototype.initMembers = function() {
     this._heartw = this._trackw/Math.cos(this._trackr);
     this._hearth = this._trackw/Math.sin(this._trackr);
     this._trackl = Math.sqrt(Math.pow((this._width - 2*this._heartw)/2, 2) + Math.pow((this._height - this._hearth)/2, 2));
@@ -47,18 +140,9 @@ Sprite_MG.prototype.initMembers = function() {
     ];
     this._line = [];
     this._track = [];
-    // 10 is tmp data;
-    this._sTrackShift = 10;
-    this._sTrackh = this._height - 2*this._sTrackShift;
-    this._sTrackw = this._sTrackh/2*Math.tan(this._trackr);
-    this._sTrack = [];
-    // shape is tmp data;
-    this._sTrackShape = [
-        [0,30, 100,30, 100,this._height-30, 0,this._height-30]
-    ];
 }
 
-Sprite_MG.prototype.createXTrack = function(_trackw) {
+Sprite_XTrackPanel.prototype.createTrack = function(_trackw) {
     var tmpb = new Bitmap(this._trackw, this._trackh);
     tmpb.fillAll('#444');
 
@@ -100,16 +184,7 @@ Sprite_MG.prototype.createXTrack = function(_trackw) {
     }
 }
 
-Sprite_MG.prototype.createSlideTrack = function() {
-    this._sTrack[0] = new Sprite_SlideTrack(0, this._sTrackShift, 
-                                                this._sTrackw, this._sTrackh, 0);
-    this._sTrack[1] = new Sprite_SlideTrack(this._width, this._height - this._sTrackShift,
-                                                this._sTrackw, this._sTrackh, Math.PI);
-    this.addChild(this._sTrack[0]);
-    this.addChild(this._sTrack[1]);
-}
-
-Sprite_MG.prototype.createButton = function() {
+Sprite_XTrackPanel.prototype.createButton = function() {
     for(var i=0;i<4;i++){
         var btn = new PIXI.Graphics();
         btn.beginFill(0xdd3333, 0.8);
@@ -118,11 +193,11 @@ Sprite_MG.prototype.createButton = function() {
     }
 }
 
-Sprite_MG.prototype.inputInit = function() {
+Sprite_XTrackPanel.prototype.inputInit = function() {
     var make_fun = function(that, id, ispush){
         return function(){
             console.log('trigger :' + id);
-            that.triggerButton(id, ispush);
+            that.triggerTrack(id, ispush);
         };
     }
     for(var i=0;i<4;i++){
@@ -130,17 +205,7 @@ Sprite_MG.prototype.inputInit = function() {
     }
 }
 
-Sprite_MG.prototype.update = function() {
-    Sprite_Base.prototype.update.call(this);
-    MGManager.sync();
-    var newBeats = MGManager.updateBeats();
-    newBeats.forEach(function(item){
-        this.createNewBeat(item);
-    }, this);
-    this.checkBeats();
-}
-
-Sprite_MG.prototype.createNewBeat = function(_beat) {
+Sprite_XTrackPanel.prototype.createNewBeat = function(_beat) {
     if(_beat.type === Beat_Base.SINGLE){
         var r = this._beatr * (_beat.position%2*2-1) * -1;
         var beat = new Beat_Single(_beat.stTime, r);
@@ -149,41 +214,23 @@ Sprite_MG.prototype.createNewBeat = function(_beat) {
         var r = this._beatr * (_beat.position%2*2-1) * -1;
         var beat = new Beat_Long(_beat.stTime, _beat.length, r, _beat.position%2);
         this._track[_beat.position].addChild(beat);
-    }else if(_beat.type === Beat_Base.SLIDE){
-        this._sTrack[_beat.position>=3?1:0].createNewBeat(_beat);
-    }
-}
-
-Sprite_MG.prototype.checkBeats = function() {
-    for(var i=0;i<4;i++){
-        if(this._track[i].children.length && this._track[i].children[0].checkMiss()){
-            this._track[i].removeChildAt(0);
-        }
-    }
-}
-
-Sprite_MG.prototype.triggerButton = function(trackid, ispush) {
-    if(this._track[trackid].children.length && this._track[trackid].children[0].trigger(ispush)){
-        this._track[trackid].removeChildAt(0);
     }
 }
 
 
 // Sprite of Slide Track
 
-function Sprite_SlideTrack() {
+function Sprite_SlideTrackPanel() {
     this.initialize.apply(this, arguments);
 }
 
-Sprite_SlideTrack.prototype = Object.create(Sprite_Base.prototype);
-Sprite_SlideTrack.prototype.constructor = Sprite_SlideTrack;
+Sprite_SlideTrackPanel.prototype = Object.create(Sprite_TrackPanel.prototype);
+Sprite_SlideTrackPanel.prototype.constructor = Sprite_SlideTrackPanel;
 
-Sprite_SlideTrack.prototype.initialize = function(_x, _y, _width, _height, _rot) {
-    Sprite_Base.prototype.initialize.call(this);
+Sprite_SlideTrackPanel.prototype.initialize = function(_x, _y, _width, _height, _rot) {
+    Sprite_TrackPanel.prototype.initialize.call(this, _width, _height);
     this.x = _x;
     this.y = _y;
-    this._width = _width;
-    this._height = _height;
     this.rotation = _rot;
     this.initMembers();
 
@@ -197,9 +244,11 @@ Sprite_SlideTrack.prototype.initialize = function(_x, _y, _width, _height, _rot)
 
     this.createTrack();
     this.inputInit();
+
+    console.log("FFGGG " + this._width + ' '+ this._height);
 }
 
-Sprite_SlideTrack.prototype.initMembers = function() {
+Sprite_SlideTrackPanel.prototype.initMembers = function() {
     // is tmp data;
     this._track = [];
     this._track.length = 3;
@@ -210,7 +259,7 @@ Sprite_SlideTrack.prototype.initMembers = function() {
     this._trackr = [0, Math.atan2(-this._width, -this._height/2), Math.atan2(this._width, -this._height/2)];
 }
 
-Sprite_SlideTrack.prototype.createTrack = function() {
+Sprite_SlideTrackPanel.prototype.createTrack = function() {
     for(var i=0;i<3;i++){
         this._track[i] = new Sprite();
         this._track[i].bitmap = new Bitmap(this._trackw[i], this._trackl[i]);
@@ -222,7 +271,7 @@ Sprite_SlideTrack.prototype.createTrack = function() {
     }
 }
 
-Sprite_SlideTrack.prototype.inputInit = function() {
+Sprite_SlideTrackPanel.prototype.inputInit = function() {
     var make_fun = function(that, id){
         return function(x1, x2){
             that.triggerTrack(id, x1, x2);
@@ -239,28 +288,9 @@ Sprite_SlideTrack.prototype.inputInit = function() {
     }
 }
 
-Sprite_SlideTrack.prototype.createNewBeat = function(_beat) {
+Sprite_SlideTrackPanel.prototype.createNewBeat = function(_beat) {
     console.log("Create Slide beat!");
     var pos = _beat.position % 3;
     var newBeat = new Beat_Slide(_beat.stTime, _beat.length, this._trackw[pos], this._trackl[pos], _beat.isRev);
     this._track[pos].addChild(newBeat);
-}
-
-Sprite_SlideTrack.prototype.update = function() {
-    Sprite_Base.prototype.update.call(this);
-    this.checkBeats();
-}
-
-Sprite_SlideTrack.prototype.checkBeats = function() {
-    for(var i=0;i<3;i++){
-        if(this._track[i].children.length && this._track[i].children[0].checkMiss()){
-            this._track[i].removeChildAt(0);
-        }
-    }
-}
-
-Sprite_SlideTrack.prototype.triggerTrack = function(trackid, x1, x2) {
-    if(this._track[trackid].children.length && this._track[trackid].children[0].trigger(x1, x2)){
-        this._track[trackid].removeChildAt(0);
-    }
 }
