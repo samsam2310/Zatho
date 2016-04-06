@@ -225,8 +225,7 @@ Sprite_SlideTrack.prototype.createTrack = function() {
 Sprite_SlideTrack.prototype.inputInit = function() {
     var make_fun = function(that, id){
         return function(x1, x2){
-            console.log('trigger S:' + id);
-            that.triggerSlide(id, x1, x2);
+            that.triggerTrack(id, x1, x2);
         };
     }
     for(var i=0;i<3;i++){
@@ -247,11 +246,21 @@ Sprite_SlideTrack.prototype.createNewBeat = function(_beat) {
     this._track[pos].addChild(newBeat);
 }
 
-Sprite_SlideTrack.prototype.triggerSlide = function(trackid, x1, x2) {
-    console.log('id' + trackid + "Slide from " + x1 + 'to' + x2);
-    // TODO: slide event handler;
-}
-
 Sprite_SlideTrack.prototype.update = function() {
     Sprite_Base.prototype.update.call(this);
+    this.checkBeats();
+}
+
+Sprite_SlideTrack.prototype.checkBeats = function() {
+    for(var i=0;i<3;i++){
+        if(this._track[i].children.length && this._track[i].children[0].checkMiss()){
+            this._track[i].removeChildAt(0);
+        }
+    }
+}
+
+Sprite_SlideTrack.prototype.triggerTrack = function(trackid, x1, x2) {
+    if(this._track[trackid].children.length && this._track[trackid].children[0].trigger(x1, x2)){
+        this._track[trackid].removeChildAt(0);
+    }
 }

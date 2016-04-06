@@ -123,7 +123,6 @@ MGManager.sync = function() {
 }
 
 MGManager.submit = function(res) {
-    console.log(res);
     this._score.num[res]++;
     if(res<2){
         this._curComb++;
