@@ -11,7 +11,6 @@ function MGManager() {
     throw new Error('This is a static class');
 }
 
-MGManager._difficulty = 0;
 MGManager._timeBeforeStart = 5000;
 MGManager._speed = 0.1;
 MGManager._preBadTime = -1000;
@@ -20,16 +19,6 @@ MGManager._preGoodTime = -50;
 MGManager._goodTime = 50;
 MGManager._okTime = 150;
 MGManager._badTime = 300;
-
-Object.defineProperty(MGManager, 'difficulty', {
-    get: function() {
-        return this._difficulty;
-    },
-    set: function(value) {
-        this._difficulty = value;
-    },
-    configurable: true
-});
 
 Object.defineProperty(MGManager, 'speed', {
     get: function() {
@@ -41,9 +30,9 @@ Object.defineProperty(MGManager, 'speed', {
     configurable: true
 });
 
-MGManager.setup = function(songId) {
+MGManager.setup = function(songId, difficulty) {
     this.initMembers();
-    this.setupSong(songId);
+    this.setupSong(songId, difficulty);
 };
 
 MGManager.initMembers = function() {
@@ -63,9 +52,9 @@ MGManager.initMembers = function() {
     // this._statusWindow = null;
 };
 
-MGManager.setupSong = function(songId) {
+MGManager.setupSong = function(songId, difficulty) {
     this._song = $dataMGSongs[songId].file;
-    this._beats = $dataMGSongs[songId].difficulty[this._difficulty].beats;
+    this._beats = $dataMGSongs[songId].difficulty[difficulty].beats;
 }
 
 MGManager.startGame = function() {
