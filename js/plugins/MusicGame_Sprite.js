@@ -208,11 +208,11 @@ Sprite_XTrackPanel.prototype.inputInit = function() {
 Sprite_XTrackPanel.prototype.createNewBeat = function(_beat) {
     if(_beat.type === Beat_Base.SINGLE){
         var r = this._beatr * (_beat.position%2*2-1) * -1;
-        var beat = new Beat_Single(_beat.stTime, r);
+        var beat = new Beat_Single(_beat.id, _beat.stTime, r);
         this._track[_beat.position].addChild(beat);
     }else if(_beat.type === Beat_Base.LONG){
         var r = this._beatr * (_beat.position%2*2-1) * -1;
-        var beat = new Beat_Long(_beat.stTime, _beat.length, r, _beat.position%2);
+        var beat = new Beat_Long(_beat.id,_beat.stTime, _beat.length, r, _beat.position%2);
         this._track[_beat.position].addChild(beat);
     }
 }
@@ -291,6 +291,6 @@ Sprite_SlideTrackPanel.prototype.inputInit = function() {
 Sprite_SlideTrackPanel.prototype.createNewBeat = function(_beat) {
     console.log("Create Slide beat!");
     var pos = _beat.position % 3;
-    var newBeat = new Beat_Slide(_beat.stTime, _beat.length, this._trackw[pos], this._trackl[pos], _beat.isRev);
+    var newBeat = new Beat_Slide(_beat.id, _beat.stTime, _beat.length, this._trackw[pos], this._trackl[pos], _beat.isRev);
     this._track[pos].addChild(newBeat);
 }

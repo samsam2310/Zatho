@@ -23,7 +23,12 @@ Beat_Base.OK = 1;
 Beat_Base.BAD = 2;
 Beat_Base.MISS = 3;
 
-Beat_Base.getResult = function(gap) {
+Beat_Base.GOOD_SCORE = 300;
+Beat_Base.OK_SCORE = 200;
+Beat_Base.BAD_SCORE = 100;
+Beat_Base.MISS_SCORE = 0;
+
+Beat_Base.getGrade = function(gap) {
     if(gap < MGManager._preBadTime){
         return this.MISS;
     }else if(gap < MGManager._preOKTime){
@@ -41,8 +46,21 @@ Beat_Base.getResult = function(gap) {
     }
 }
 
-Beat_Base.prototype.initialize = function() {
+Beat_Base.getScore = function(grade) {
+    if(grade === Beat_Base.MISS){
+        return this.MISS_SCORE;
+    }else if(grade === Beat_Base.BAD){
+        return this.BAD_SCORE;
+    }else if(grade === Beat_Base.OK){
+        return this.OK_SCORE;
+    }else if(grade === Beat_Base.GOOD){
+        return this.GOOD_SCORE;
+    }
+}
+
+Beat_Base.prototype.initialize = function(id) {
     Sprite_Base.prototype.initialize.call(this);
+    this._id = id;
 }
 
 Beat_Base.prototype.update = function() {
@@ -50,8 +68,8 @@ Beat_Base.prototype.update = function() {
     this.updatePosition();
 }
 
-Beat_Base.prototype.submitResult = function(res) {
-    MGManager.submit(res);
+Beat_Base.prototype.submitResult = function(grade) {
+    MGManager.submit(this._id, grade, Beat_Base.getScore(grade));
 }
 
 
@@ -64,8 +82,8 @@ function Beat_Single() {
 Beat_Single.prototype = Object.create(Beat_Base.prototype);
 Beat_Single.prototype.constructor = Beat_Single;
 
-Beat_Single.prototype.initialize = function(_time, _rotation) {
-    Beat_Base.prototype.initialize.call(this);
+Beat_Single.prototype.initialize = function(id, _time, _rotation) {
+    Beat_Base.prototype.initialize.call(this, id);
     this._time = _time;
     this.rotation = _rotation;
     // 1000 is tmp data;
@@ -103,7 +121,7 @@ Beat_Single.prototype.trigger = function(ispush) {
         if(gap < MGManager._preBadTime){
             return false;
         }else {
-            this.submitResult(Beat_Base.getResult(gap));
+            this.submitResult(Beat_Base.getGrade(gap));
         }
         return true;
     }
@@ -118,8 +136,8 @@ function Beat_Long() {
 Beat_Long.prototype = Object.create(Beat_Base.prototype);
 Beat_Long.prototype.constructor = Beat_Long;
 
-Beat_Long.prototype.initialize = function(_time, _length, _rotation, _isInverse) {
-    Beat_Base.prototype.initialize.call(this);
+Beat_Long.prototype.initialize = function(id, _time, _length, _rotation, _isInverse) {
+    Beat_Base.prototype.initialize.call(this, id);
     this._time = _time;
     this._length = _length;
     this.rotation = _rotation;
@@ -189,7 +207,7 @@ Beat_Long.prototype.trigger = function(ispush) {
         if(gap < MGManager._preBadTime){
             return false;
         }else{
-            this.setfirstState(Beat_Base.getResult(gap));
+            this.setfirstState(Beat_Base.getGrade(gap));
         }
         return false;
     }else{
@@ -197,7 +215,7 @@ Beat_Long.prototype.trigger = function(ispush) {
         if(this._firstState === -1){
             return false;
         }else{
-            this.submitResult(Beat_Base.getResult(gap));
+            this.submitResult(Beat_Base.getGrade(gap));
         }
         return true;
     }
@@ -213,8 +231,8 @@ function Beat_Slide() {
 Beat_Slide.prototype = Object.create(Beat_Base.prototype);
 Beat_Slide.prototype.constructor = Beat_Slide;
 
-Beat_Slide.prototype.initialize = function(_time, _length, _width, _height, _isRev) {
-    Beat_Base.prototype.initialize.call(this);
+Beat_Slide.prototype.initialize = function(id, _time, _length, _width, _height, _isRev) {
+    Beat_Base.prototype.initialize.call(this, id);
     this._time = _time;
     this._length = _length;
     this._width = _width;
@@ -293,7 +311,7 @@ Beat_Slide.prototype.trigger = function(x1, x2) {
         if(this._checkPoint.length === 0){
             var gap = MGManager.seek() - this._time - this._length;
             console.log("Slide Gap: "+gap);
-            this.submitResult(Beat_Base.getResult(gap));
+            this.submitResult(Beat_Base.getGrade(gap));
             return true;
         }
     }

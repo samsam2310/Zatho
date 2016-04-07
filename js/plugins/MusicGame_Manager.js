@@ -12,6 +12,7 @@ function MGManager() {
 }
 
 MGManager._timeBeforeStart = 5000;
+MGManager._timeAfterEnd = 5000;
 MGManager._speed = 0.1;
 MGManager._preBadTime = -1000;
 MGManager._preOKTime = -150;
@@ -44,25 +45,51 @@ MGManager.initMembers = function() {
     this._beats = [];
     this._beatpointer = 0;
     this._score = {};
-    this._score.num = [0,0,0,0];
+    this._score.count = [0,0,0,0];
     this._score.comb = 0;
+    this._score.point = 0;
     this._score.comprate = 0.0;
     this._curComb = 0;
     this._passBeat = 0;
+
+    this._saveWidth = 0;
+    this._saveHight = 0;
+    this._saveBoxWidth = 0;
+    this._saveBoxHight = 0;
     // this._statusWindow = null;
 };
 
 MGManager.setupSong = function(songId, difficulty) {
     this._song = $dataMGSongs[songId].file;
-    this._beats = $dataMGSongs[songId].difficulty[difficulty].beats;
+    this._beats = $dataMGSongs[songId].difficulty[difficulty].beats.clone();
+    for(var i = 0; i < this._beats; i++) {
+        this._beats[i].id = i;
+        this._beats[i].cmplt = 0;
+    }
 }
 
 MGManager.startGame = function() {
+    if(this._phase !== 'init'){
+        console.error('MGManager Start Game Error, Not Init yet!!');
+        return;
+    }
     AudioManager.loadMe(this._song, function(){
         this._phase = 'play';
         this._startTime = (new Date()).valueOf() + this._timeBeforeStart;
         setTimeout(function(){AudioManager.playLoadMe();}, this._timeBeforeStart);
     }.bind(this));
+}
+
+MGManager.endGame = function() {
+    this._phase = 'end';
+    console.log('End Game');
+    setTimeout(function(){
+        SceneManager.goto(Scene_MGScore);
+    }, this._timeAfterEnd);
+}
+
+MGManager.terminate = function() {
+    this._phase = 'terminate';
 }
 
 MGManager.updateBeats = function() {
@@ -74,7 +101,8 @@ MGManager.updateBeats = function() {
     }
     newBeats.length = p;
     for(var i=0;i<p;i++){
-        newBeats[i] = this._beats[this._beatpointer-p+i];
+        newBeats[i] = JsonEx.makeDeepCopy(this._beats[this._beatpointer-p+i]);
+        newBeats[i].id = this._beatpointer-p+i;
     }
     return newBeats;
 }
@@ -101,6 +129,20 @@ MGManager.replayBgmAndBgs = function() {
     }
 };
 
+MGManager.saveWidthAndHight = function() {
+    this._saveBoxWidth = Graphics.boxWidth;
+    this._saveWidth = Graphics.width;
+    this._saveBoxHight = Graphics.boxHeight;
+    this._saveHight = Graphics.height;
+}
+
+MGManager.resetWidthAndHight = function() {
+    Graphics.boxWidth = this._saveBoxWidth;
+    Graphics.width = this._saveWidth;
+    Graphics.boxHeight = this._saveBoxHight;
+    Graphics.height = this._saveHight;
+}
+
 MGManager.seek = function() {
     return new Date() - this._startTime;
 }
@@ -111,20 +153,26 @@ MGManager.sync = function() {
     }
 }
 
-MGManager.submit = function(res) {
-    this._score.num[res]++;
-    if(res<2){
+MGManager.submit = function(id, grade, point) {
+    this._beats[id].state++;
+    if(this._beats[id].state>1)console.error("JIZZ! beats submit twice!! beat ID: "+id);
+    this._score.count[grade]++;
+    this._score.point += point;
+    if(grade<2){
         this._curComb++;
     }else{
         this._score.comb = Math.max(this._score.comb, this._curComb);
         this._curComb = 0;
     }
-    this.passBeat++;
-    console.log("Status :" + this.getResultText(res));
+    this._passBeat++;
+    if(this._passBeat === this._beats.length){
+        this.endGame();
+    }
+    console.log("Beat id: "+id +' ; Status : ' + this.getResultText(grade));
 }
 
-MGManager.getResultText = function(res) {
-    switch(res){
+MGManager.getResultText = function(grade) {
+    switch(grade){
         case Beat_Base.GOOD:
             return 'GOOD';
         case Beat_Base.OK:
